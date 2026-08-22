@@ -16,12 +16,45 @@ class _TembungPageState extends State<TembungPage> {
   static const int pageSize = 9;
 
   late Future<List<TembungData>> _dictionaryFuture;
+
+  final TextEditingController _searchController =
+      TextEditingController();
+
   int _currentPage = 0;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _dictionaryFuture = TembungLoader.loadDictionary();
+
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.trim().toLowerCase();
+      _currentPage = 0;
+    });
+  }
+
+  List<TembungData> _filterData(List<TembungData> data) {
+    if (_searchQuery.isEmpty) {
+      return data;
+    }
+
+    return data.where((item) {
+      return item.ngoko.toLowerCase().contains(_searchQuery) ||
+          item.indonesia.toLowerCase().contains(_searchQuery) ||
+          item.kramaAlus.toLowerCase().contains(_searchQuery);
+    }).toList();
   }
 
   int _totalPages(int totalItems) {
@@ -30,11 +63,12 @@ class _TembungPageState extends State<TembungPage> {
 
   List<TembungData> _getCurrentPage(List<TembungData> data) {
     final start = _currentPage * pageSize;
-    final end = (start + pageSize).clamp(0, data.length);
 
     if (start >= data.length) {
       return [];
     }
+
+    final end = (start + pageSize).clamp(0, data.length);
 
     return data.sublist(start, end);
   }
@@ -80,6 +114,48 @@ class _TembungPageState extends State<TembungPage> {
                   style: TextStyle(
                     color: AppTheme.muted,
                     fontFamily: 'Arial',
+                  ),
+                ),
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: 500,
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(
+                      color: AppTheme.text,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Goleki tembung...',
+                      hintStyle: const TextStyle(
+                        color: AppTheme.muted,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppTheme.muted,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                              icon: const Icon(
+                                Icons.close_rounded,
+                              ),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: AppTheme.paper,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide(
+                          color: AppTheme.gold.withOpacity(.5),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 35),
@@ -142,13 +218,14 @@ class _TembungPageState extends State<TembungPage> {
                     }
 
                     final data = snapshot.data ?? [];
+                    final filteredData = _filterData(data);
 
-                    if (data.isEmpty) {
+                    if (filteredData.isEmpty) {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(40),
                           child: Text(
-                            'Durung ana data tembung.',
+                            'Tembung ora ditemokake.',
                             style: TextStyle(
                               color: AppTheme.muted,
                             ),
@@ -157,11 +234,29 @@ class _TembungPageState extends State<TembungPage> {
                       );
                     }
 
-                    final totalPages = _totalPages(data.length);
-                    final currentData = _getCurrentPage(data);
+                    final totalPages =
+                        _totalPages(filteredData.length);
+
+                    if (_currentPage >= totalPages) {
+                      _currentPage = totalPages - 1;
+                    }
+
+                    final currentData =
+                        _getCurrentPage(filteredData);
 
                     return Column(
                       children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${filteredData.length} tembung ditemokake',
+                            style: const TextStyle(
+                              color: AppTheme.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
                         Wrap(
                           spacing: 18,
                           runSpacing: 18,
