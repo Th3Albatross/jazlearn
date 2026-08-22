@@ -1,5 +1,5 @@
 import '../data/tembung_data.dart';
-import '../loader/tembung_loader.dart';
+import '../services/tembung_loader.dart';
 
 class TembungRepository {
   TembungRepository._();

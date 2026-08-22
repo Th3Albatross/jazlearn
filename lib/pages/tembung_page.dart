@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../data/tembung_data.dart';
-import '../loader/tembung_loader.dart';
+import '../services/tembung_loader.dart';
+import '../services/sound_service.dart';
 
 class TembungPage extends StatefulWidget {
   const TembungPage({super.key});
@@ -17,8 +18,7 @@ class _TembungPageState extends State<TembungPage> {
 
   late Future<List<TembungData>> _dictionaryFuture;
 
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   int _currentPage = 0;
   String _searchQuery = '';
@@ -111,24 +111,17 @@ class _TembungPageState extends State<TembungPage> {
                 const SizedBox(height: 8),
                 const Text(
                   'Sinau kosakata Bahasa Jawa saka dasar.',
-                  style: TextStyle(
-                    color: AppTheme.muted,
-                    fontFamily: 'Arial',
-                  ),
+                  style: TextStyle(color: AppTheme.muted, fontFamily: 'Arial'),
                 ),
                 const SizedBox(height: 25),
                 SizedBox(
                   width: 500,
                   child: TextField(
                     controller: _searchController,
-                    style: const TextStyle(
-                      color: AppTheme.text,
-                    ),
+                    style: const TextStyle(color: AppTheme.text),
                     decoration: InputDecoration(
                       hintText: 'Goleki tembung...',
-                      hintStyle: const TextStyle(
-                        color: AppTheme.muted,
-                      ),
+                      hintStyle: const TextStyle(color: AppTheme.muted),
                       prefixIcon: const Icon(
                         Icons.search_rounded,
                         color: AppTheme.muted,
@@ -138,9 +131,7 @@ class _TembungPageState extends State<TembungPage> {
                               onPressed: () {
                                 _searchController.clear();
                               },
-                              icon: const Icon(
-                                Icons.close_rounded,
-                              ),
+                              icon: const Icon(Icons.close_rounded),
                             )
                           : null,
                       filled: true,
@@ -162,8 +153,7 @@ class _TembungPageState extends State<TembungPage> {
                 FutureBuilder<List<TembungData>>(
                   future: _dictionaryFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(40),
@@ -179,9 +169,7 @@ class _TembungPageState extends State<TembungPage> {
                         decoration: BoxDecoration(
                           color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.red.withOpacity(.2),
-                          ),
+                          border: Border.all(color: Colors.red.withOpacity(.2)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,9 +185,7 @@ class _TembungPageState extends State<TembungPage> {
                             const SizedBox(height: 8),
                             Text(
                               snapshot.error.toString(),
-                              style: const TextStyle(
-                                color: AppTheme.muted,
-                              ),
+                              style: const TextStyle(color: AppTheme.muted),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton(
@@ -226,23 +212,19 @@ class _TembungPageState extends State<TembungPage> {
                           padding: EdgeInsets.all(40),
                           child: Text(
                             'Tembung ora ditemokake.',
-                            style: TextStyle(
-                              color: AppTheme.muted,
-                            ),
+                            style: TextStyle(color: AppTheme.muted),
                           ),
                         ),
                       );
                     }
 
-                    final totalPages =
-                        _totalPages(filteredData.length);
+                    final totalPages = _totalPages(filteredData.length);
 
                     if (_currentPage >= totalPages) {
                       _currentPage = totalPages - 1;
                     }
 
-                    final currentData =
-                        _getCurrentPage(filteredData);
+                    final currentData = _getCurrentPage(filteredData);
 
                     return Column(
                       children: [
@@ -261,9 +243,7 @@ class _TembungPageState extends State<TembungPage> {
                           spacing: 18,
                           runSpacing: 18,
                           children: currentData.map((item) {
-                            return VocabularyCard(
-                              data: item,
-                            );
+                            return VocabularyCard(data: item);
                           }).toList(),
                         ),
                         const SizedBox(height: 35),
@@ -274,9 +254,7 @@ class _TembungPageState extends State<TembungPage> {
                               onPressed: _currentPage > 0
                                   ? _previousPage
                                   : null,
-                              icon: const Icon(
-                                Icons.chevron_left_rounded,
-                              ),
+                              icon: const Icon(Icons.chevron_left_rounded),
                             ),
                             const SizedBox(width: 15),
                             Text(
@@ -288,13 +266,10 @@ class _TembungPageState extends State<TembungPage> {
                             ),
                             const SizedBox(width: 15),
                             IconButton(
-                              onPressed:
-                                  _currentPage < totalPages - 1
-                                      ? () => _nextPage(totalPages)
-                                      : null,
-                              icon: const Icon(
-                                Icons.chevron_right_rounded,
-                              ),
+                              onPressed: _currentPage < totalPages - 1
+                                  ? () => _nextPage(totalPages)
+                                  : null,
+                              icon: const Icon(Icons.chevron_right_rounded),
                             ),
                           ],
                         ),
@@ -314,10 +289,7 @@ class _TembungPageState extends State<TembungPage> {
 class VocabularyCard extends StatelessWidget {
   final TembungData data;
 
-  const VocabularyCard({
-    super.key,
-    required this.data,
-  });
+  const VocabularyCard({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -327,9 +299,7 @@ class VocabularyCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.paper,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.gold.withOpacity(.2),
-        ),
+        border: Border.all(color: AppTheme.gold.withOpacity(.2)),
       ),
       child: Stack(
         children: [
@@ -367,10 +337,10 @@ class VocabularyCard extends StatelessWidget {
           Positioned(
             right: 0,
             child: IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.volume_up_rounded,
-              ),
+              onPressed: () {
+                SoundService.instance.playNgoko(data.uid);
+              },
+              icon: const Icon(Icons.volume_up_rounded),
             ),
           ),
         ],
@@ -378,4 +348,3 @@ class VocabularyCard extends StatelessWidget {
     );
   }
 }
-
