@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'pages/home_page.dart';
+import 'pages/materi_page.dart';
 import 'pages/tembung_page.dart';
 import 'pages/aksara_page.dart';
 import 'pages/latihan_page.dart';
@@ -7,6 +9,10 @@ import 'pages/pencapaian_page.dart';
 import 'theme/app_theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  VideoPlayerMediaKit.ensureInitialized(linux: true);
+
   runApp(const JazLearnApp());
 }
 
@@ -22,6 +28,7 @@ class JazLearnApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const HomePage(),
+        '/materi': (context) => const MateriPage(),
         '/tembung': (context) => const TembungPage(),
         '/aksara': (context) => const AksaraPage(),
         '/latihan': (context) => const LatihanPage(),
@@ -30,4 +37,3 @@ class JazLearnApp extends StatelessWidget {
     );
   }
 }
-

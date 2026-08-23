@@ -20,6 +20,7 @@ class AppSidebar extends StatelessWidget {
               _brand(),
               const SizedBox(height: 45),
               _menu(context, Icons.home_rounded, 'Beranda', '/'),
+	      _menu(context, Icons.library_books_rounded, 'Materi', '/materi'),
               _menu(
                 context,
                 Icons.menu_book_rounded,

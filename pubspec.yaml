@@ -46,6 +46,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   audioplayers: ^6.8.1
+  video_player: ^2.14.0
+  video_player_media_kit: ^2.0.0
+  media_kit_libs_linux: any
+  flutter_markdown_plus: ^1.0.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -66,6 +70,9 @@ flutter:
     - assets/sounds/krama/
     - assets/sounds/ngoko/
     - assets/sounds/dictionary.json
+    - assets/materi/videos/
+    - assets/materi/summaries/
+    - assets/materi/dictionary.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
