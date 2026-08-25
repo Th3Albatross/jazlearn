@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../data/materi_data.dart';
 import '../services/materi_loader.dart';
-import '../widgets/materi_video_player.dart';
-
-enum MateriView { video, summary }
+import 'materi_detail_page.dart';
 
 class MateriPage extends StatefulWidget {
   const MateriPage({super.key});
@@ -20,72 +15,53 @@ class MateriPage extends StatefulWidget {
 
 class _MateriPageState extends State<MateriPage> {
   late Future<List<MateriData>> _materiFuture;
+  final TextEditingController _searchController =
+      TextEditingController();
 
-  int _selectedIndex = 0;
-  MateriView _view = MateriView.video;
-  Duration _currentVideoPosition = Duration.zero;
-  String? _summary;
-
-  List<MateriData> _materiList = [];
-
-  MateriData? get _selectedMateri {
-    if (_materiList.isEmpty || _selectedIndex >= _materiList.length) {
-      return null;
-    }
-
-    return _materiList[_selectedIndex];
-  }
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _materiFuture = _loadMateri();
+    _materiFuture = MateriLoader.load();
+    _searchController.addListener(_onSearchChanged);
   }
 
-  Future<List<MateriData>> _loadMateri() async {
-    final data = await MateriLoader.load();
-
-    _materiList = data;
-
-    if (data.isNotEmpty) {
-      await _loadSummary(data[0]);
-    }
-
-    return data;
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadSummary(MateriData materi) async {
-    if (mounted) {
-      setState(() {
-        _summary = null;
-      });
-    }
-
-    final summary = await rootBundle.loadString(materi.summaryAsset);
-
-    if (!mounted) {
-      return;
-    }
-
+  void _onSearchChanged() {
     setState(() {
-      _summary = summary;
+      _searchQuery = _searchController.text.trim().toLowerCase();
     });
   }
 
-  Future<void> _selectMateri(int index) async {
-    if (index < 0 || index >= _materiList.length) {
-      return;
+  List<MateriData> _filterMateri(List<MateriData> data) {
+    if (_searchQuery.isEmpty) {
+      return data;
     }
 
-    final materi = _materiList[index];
+    return data.where((item) {
+      return item.title.toLowerCase().contains(_searchQuery) ||
+          item.description.toLowerCase().contains(_searchQuery);
+    }).toList();
+  }
 
-    setState(() {
-      _selectedIndex = index;
-      _view = MateriView.video;
-      _summary = null;
-    });
+  Future<void> _openMateri(MateriData materi) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MateriDetailPage(materi: materi),
+      ),
+    );
+  }
 
-    await _loadSummary(materi);
+  void _clearSearch() {
+    _searchController.clear();
   }
 
   @override
@@ -93,7 +69,8 @@ class _MateriPageState extends State<MateriPage> {
     return AppShell(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(45),
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1200),
             child: Column(
@@ -110,98 +87,102 @@ class _MateriPageState extends State<MateriPage> {
                 const SizedBox(height: 8),
                 const Text(
                   'Sinau teori lan tata basa Jawa.',
-                  style: TextStyle(color: AppTheme.muted, fontFamily: 'Arial'),
+                  style: TextStyle(
+                    color: AppTheme.muted,
+                    fontFamily: 'Arial',
+                  ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 25),
+                TextField(
+                  controller: _searchController,
+                  style: const TextStyle(
+                    color: AppTheme.text,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Goleki materi...',
+                    hintStyle: const TextStyle(
+                      color: AppTheme.muted,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppTheme.muted,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            onPressed: _clearSearch,
+                            icon: const Icon(Icons.close_rounded),
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppTheme.paper,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide(
+                        color: AppTheme.gold.withOpacity(.5),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 35),
                 FutureBuilder<List<MateriData>>(
                   future: _materiFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
                       return const SizedBox(
-                        height: 200,
-                        child: Center(child: CircularProgressIndicator()),
+                        height: 240,
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
                       );
                     }
 
                     if (snapshot.hasError) {
-                      return _ErrorView(
+                      return _ErrorBox(
                         error: snapshot.error.toString(),
                         onRetry: () {
                           setState(() {
-                            _selectedIndex = 0;
-                            _summary = null;
-                            _materiFuture = _loadMateri();
+                            _materiFuture = MateriLoader.load();
                           });
                         },
                       );
                     }
 
-                    final materiList = snapshot.data ?? [];
+                    final allMateri = snapshot.data ?? [];
+                    final filteredMateri = _filterMateri(allMateri);
 
-                    if (materiList.isEmpty) {
-                      return const SizedBox(
-                        height: 200,
-                        child: Center(
-                          child: Text(
-                            'Durung ana materi.',
-                            style: TextStyle(color: AppTheme.muted),
-                          ),
-                        ),
+                    if (allMateri.isEmpty) {
+                      return const _EmptyState(
+                        message: 'Durung ana materi.',
                       );
                     }
 
-                    final materi = _selectedMateri!;
+                    if (filteredMateri.isEmpty) {
+                      return const _EmptyState(
+                        message: 'Materi ora ditemokake.',
+                      );
+                    }
 
                     return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _MateriSelector(
-                          items: materiList,
-                          selectedIndex: _selectedIndex,
-                          onSelected: _selectMateri,
-                        ),
-                        const SizedBox(height: 30),
-                        Text(
-                          materi.title,
-                          style: const TextStyle(
-                            color: AppTheme.text,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${filteredMateri.length} materi ditemokake',
+                            style: const TextStyle(
+                              color: AppTheme.muted,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          materi.description,
-                          style: const TextStyle(
-                            color: AppTheme.muted,
-                            fontFamily: 'Arial',
-                          ),
-                        ),
-                        const SizedBox(height: 25),
-                        _ViewSelector(
-                          view: _view,
-                          onChanged: (view) {
-                            setState(() {
-                              _view = view;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          child: _view == MateriView.video
-                              ? MateriVideoPlayer(
-                                  key: ValueKey('video_${materi.uid}'),
-                                  videoId: materi.uid,
-                                  asset: materi.videoAsset,
-                                  onPositionChanged: (position) {
-                                    _currentVideoPosition = position;
-                                  },
-                                )
-                              : _SummaryView(
-                                  key: ValueKey('summary_${materi.uid}'),
-                                  summary: _summary,
-                                ),
+                        const SizedBox(height: 15),
+                        _MateriGrid(
+                          items: filteredMateri,
+                          onTap: _openMateri,
                         ),
                       ],
                     );
@@ -216,160 +197,188 @@ class _MateriPageState extends State<MateriPage> {
   }
 }
 
-class _MateriSelector extends StatelessWidget {
+class _MateriGrid extends StatelessWidget {
   final List<MateriData> items;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
+  final ValueChanged<MateriData> onTap;
 
-  const _MateriSelector({
+  const _MateriGrid({
     required this.items,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 92,
-      width: double.infinity,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          final selected = index == selectedIndex;
-
-          return Material(
-            color: selected ? AppTheme.green : AppTheme.paper,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: () => onSelected(index),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 230,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: selected
-                        ? AppTheme.green
-                        : AppTheme.gold.withOpacity(.15),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Materi ${index + 1}',
-                      style: TextStyle(
-                        color: selected ? Colors.white70 : AppTheme.muted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: selected ? Colors.white : AppTheme.text,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ViewSelector extends StatelessWidget {
-  final MateriView view;
-  final ValueChanged<MateriView> onChanged;
-
-  const _ViewSelector({required this.view, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppTheme.paper,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.gold.withOpacity(.15)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Button(
-            label: 'Video',
-            icon: Icons.play_circle_outline_rounded,
-            selected: view == MateriView.video,
-            onTap: () {
-              onChanged(MateriView.video);
-            },
-          ),
-          _Button(
-            label: 'Rangkuman',
-            icon: Icons.menu_book_rounded,
-            selected: view == MateriView.summary,
-            onTap: () {
-              onChanged(MateriView.summary);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Button extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _Button({
-    required this.label,
-    required this.icon,
-    required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppTheme.green : Colors.transparent,
-      borderRadius: BorderRadius.circular(9),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 17,
-                color: selected ? Colors.white : AppTheme.muted,
-              ),
-              const SizedBox(width: 7),
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected ? Colors.white : AppTheme.muted,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1050
+            ? 3
+            : width >= 700
+                ? 2
+                : 1;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 18,
+            mainAxisSpacing: 18,
+            childAspectRatio: width < 700 ? 2.1 : 1.45,
+          ),
+          itemBuilder: (context, index) {
+            final materi = items[index];
+            return _MateriCard(
+              index: index,
+              materi: materi,
+              onTap: () => onTap(materi),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _MateriCard extends StatefulWidget {
+  final int index;
+  final MateriData materi;
+  final VoidCallback onTap;
+
+  const _MateriCard({
+    required this.index,
+    required this.materi,
+    required this.onTap,
+  });
+
+  @override
+  State<_MateriCard> createState() => _MateriCardState();
+}
+
+class _MateriCardState extends State<_MateriCard> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          transform: Matrix4.translationValues(
+            0,
+            hover ? -5 : 0,
+            0,
+          ),
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: AppTheme.paper,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.gold.withOpacity(.18),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(
+                  hover ? .10 : .04,
                 ),
+                blurRadius: hover ? 22 : 12,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppTheme.green.withOpacity(.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.play_lesson_rounded,
+                      color: AppTheme.green,
+                      size: 24,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.gold.withOpacity(.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'MATERI ${widget.index + 1}',
+                      style: const TextStyle(
+                        color: AppTheme.gold,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+              Text(
+                widget.materi.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.text,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Text(
+                  widget.materi.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.muted,
+                    fontSize: 13,
+                    height: 1.5,
+                    fontFamily: 'Arial',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.play_circle_outline_rounded,
+                    color: AppTheme.green,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Video & Rangkuman',
+                    style: TextStyle(
+                      color: AppTheme.muted,
+                      fontSize: 11,
+                      fontFamily: 'Arial',
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: AppTheme.green,
+                    size: 20,
+                  ),
+                ],
               ),
             ],
           ),
@@ -379,109 +388,86 @@ class _Button extends StatelessWidget {
   }
 }
 
-class _SummaryView extends StatelessWidget {
-  final String? summary;
+class _EmptyState extends StatelessWidget {
+  final String message;
 
-  const _SummaryView({super.key, required this.summary});
+  const _EmptyState({required this.message});
 
   @override
   Widget build(BuildContext context) {
-    if (summary == null) {
-      return const SizedBox(
-        height: 300,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         color: AppTheme.paper,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.gold.withOpacity(.15)),
       ),
-      child: MarkdownBody(
-        data: summary!,
-        selectable: true,
-        styleSheet: MarkdownStyleSheet(
-          h1: const TextStyle(
-            color: AppTheme.text,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
+      child: Column(
+        children: [
+          const Icon(
+            Icons.menu_book_rounded,
+            color: AppTheme.gold,
+            size: 42,
           ),
-          h2: const TextStyle(
-            color: AppTheme.green,
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-          ),
-          h3: const TextStyle(
-            color: AppTheme.green,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-          p: const TextStyle(
-            color: AppTheme.text,
-            fontSize: 15,
-            height: 1.7,
-            fontFamily: 'Arial',
-          ),
-          listBullet: const TextStyle(color: AppTheme.gold),
-          blockquote: const TextStyle(
-            color: AppTheme.muted,
-            fontStyle: FontStyle.italic,
-            fontSize: 15,
-            height: 1.6,
-          ),
-          blockquoteDecoration: BoxDecoration(
-            color: AppTheme.gold.withOpacity(.06),
-            border: const Border(
-              left: BorderSide(color: AppTheme.gold, width: 3),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            style: const TextStyle(
+              color: AppTheme.muted,
+              fontFamily: 'Arial',
             ),
           ),
-          blockquotePadding: const EdgeInsets.all(16),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _ErrorView extends StatelessWidget {
+class _ErrorBox extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
 
-  const _ErrorView({required this.error, required this.onRetry});
+  const _ErrorBox({
+    required this.error,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.paper,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.red.withOpacity(.2)),
+        border: Border.all(
+          color: Colors.red.withOpacity(.2),
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 40),
-          const SizedBox(height: 10),
           const Text(
             'Gagal memuat materi',
             style: TextStyle(
-              color: AppTheme.text,
+              color: Colors.red,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             error,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.muted, fontSize: 13),
+            style: const TextStyle(
+              color: AppTheme.muted,
+              fontSize: 13,
+            ),
           ),
-          const SizedBox(height: 15),
-          ElevatedButton(onPressed: onRetry, child: const Text('Coba maneh')),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onRetry,
+            child: const Text('Coba maneh'),
+          ),
         ],
       ),
     );
