@@ -39,12 +39,6 @@ class AppSidebar extends StatelessWidget {
                 'Latihan',
                 '/latihan',
               ),
-              _menu(
-                context,
-                Icons.emoji_events_rounded,
-                'Pencapaian',
-                '/pencapaian',
-              ),
               const Spacer(),
             ],
           ),

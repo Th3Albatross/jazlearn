@@ -86,7 +86,7 @@ class _MateriPageState extends State<MateriPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Sinau teori lan tata basa Jawa.',
+                  'Belajar teori dan tata bahasa jawa',
                   style: TextStyle(
                     color: AppTheme.muted,
                     fontFamily: 'Arial',
@@ -99,7 +99,7 @@ class _MateriPageState extends State<MateriPage> {
                     color: AppTheme.text,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Goleki materi...',
+                    hintText: 'Cari materi...',
                     hintStyle: const TextStyle(
                       color: AppTheme.muted,
                     ),

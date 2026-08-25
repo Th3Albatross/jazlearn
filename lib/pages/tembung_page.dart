@@ -126,7 +126,7 @@ class _TembungPageState extends State<TembungPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Sinau kosakata Bahasa Jawa saka dasar.',
+                  'Cari kosakata dalam bahasa jawa',
                   style: TextStyle(
                     color: AppTheme.muted,
                     fontFamily: 'Arial',
@@ -142,7 +142,7 @@ class _TembungPageState extends State<TembungPage> {
                           color: AppTheme.text,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Goleki tembung...',
+                          hintText: 'Cari kosakata...',
                           hintStyle: const TextStyle(
                             color: AppTheme.muted,
                           ),

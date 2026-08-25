@@ -5,7 +5,6 @@ import 'pages/materi_page.dart';
 import 'pages/tembung_page.dart';
 import 'pages/aksara_page.dart';
 import 'pages/latihan_page.dart';
-import 'pages/pencapaian_page.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -32,8 +31,7 @@ class JazLearnApp extends StatelessWidget {
         '/tembung': (context) => const TembungPage(),
         '/aksara': (context) => const AksaraPage(),
         '/latihan': (context) => const LatihanPage(),
-        '/pencapaian': (context) => const PencapaianPage(),
-      },
+      }
     );
   }
 }

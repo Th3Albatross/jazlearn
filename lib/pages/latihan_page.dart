@@ -13,6 +13,12 @@ enum QuizType {
   ngokoKrama,
 }
 
+enum QuizDifficulty {
+  easy,
+  medium,
+  hard,
+}
+
 class QuizQuestion {
   final String prompt;
   final String answer;
@@ -52,12 +58,14 @@ class _LatihanPageState extends State<LatihanPage> {
   late Future<List<TembungData>> _dictionaryFuture;
 
   QuizType? _selectedQuizType;
+  QuizDifficulty _selectedDifficulty = QuizDifficulty.medium;
   List<QuizQuestion> _questions = [];
   List<QuizResultItem> _results = [];
   int _currentQuestion = 0;
   String? _selectedAnswer;
   bool _submitted = false;
   bool _finished = false;
+  bool _quizStarted = false;
 
   @override
   void initState() {
@@ -65,8 +73,28 @@ class _LatihanPageState extends State<LatihanPage> {
     _dictionaryFuture = TembungLoader.loadDictionary();
   }
 
-  void _startQuiz(QuizType type, List<TembungData> data) {
-    final questions = _buildQuestions(type, data, count: 10);
+  int _questionCount(QuizDifficulty difficulty) {
+    switch (difficulty) {
+      case QuizDifficulty.easy:
+        return 5;
+      case QuizDifficulty.medium:
+        return 10;
+      case QuizDifficulty.hard:
+        return 20;
+    }
+  }
+
+  void _startQuiz(
+    QuizType type,
+    List<TembungData> data, {
+    QuizDifficulty? difficulty,
+  }) {
+    final activeDifficulty = difficulty ?? _selectedDifficulty;
+    final questions = _buildQuestions(
+      type,
+      data,
+      count: _questionCount(activeDifficulty),
+    );
 
     if (questions.isEmpty) {
       return;
@@ -74,12 +102,14 @@ class _LatihanPageState extends State<LatihanPage> {
 
     setState(() {
       _selectedQuizType = type;
+      _selectedDifficulty = activeDifficulty;
       _questions = questions;
       _results = [];
       _currentQuestion = 0;
       _selectedAnswer = null;
       _submitted = false;
       _finished = false;
+      _quizStarted = true;
     });
   }
 
@@ -207,7 +237,11 @@ class _LatihanPageState extends State<LatihanPage> {
 
     _dictionaryFuture.then((data) {
       if (mounted) {
-        _startQuiz(type, data);
+        _startQuiz(
+          type,
+          data,
+          difficulty: _selectedDifficulty,
+        );
       }
     });
   }
@@ -215,12 +249,14 @@ class _LatihanPageState extends State<LatihanPage> {
   void _backToQuizSelection() {
     setState(() {
       _selectedQuizType = null;
+      _selectedDifficulty = QuizDifficulty.medium;
       _questions = [];
       _results = [];
       _currentQuestion = 0;
       _selectedAnswer = null;
       _submitted = false;
       _finished = false;
+      _quizStarted = false;
     });
   }
 
@@ -275,15 +311,38 @@ class _LatihanPageState extends State<LatihanPage> {
                   return const _EmptyDataView();
                 }
 
-                if (_selectedQuizType == null) {
+                if (!_quizStarted) {
                   return _QuizSelectionView(
-                    onSelected: (type) => _startQuiz(type, data),
+                    selectedQuizType: _selectedQuizType,
+                    selectedDifficulty: _selectedDifficulty,
+                    onQuizTypeChanged: (type) {
+                      setState(() {
+                        _selectedQuizType = type;
+                      });
+                    },
+                    onDifficultyChanged: (difficulty) {
+                      setState(() {
+                        _selectedDifficulty = difficulty;
+                      });
+                    },
+                    onStart: () {
+                      if (_selectedQuizType == null) {
+                        return;
+                      }
+
+                      _startQuiz(
+                        _selectedQuizType!,
+                        data,
+                        difficulty: _selectedDifficulty,
+                      );
+                    },
                   );
                 }
 
                 if (_finished) {
                   return _QuizResultView(
                     quizType: _selectedQuizType!,
+                    difficulty: _selectedDifficulty,
                     total: _questions.length,
                     correct: _correctCount,
                     wrong: _wrongCount,
@@ -316,9 +375,41 @@ class _LatihanPageState extends State<LatihanPage> {
 }
 
 class _QuizSelectionView extends StatelessWidget {
-  final ValueChanged<QuizType> onSelected;
+  final QuizType? selectedQuizType;
+  final QuizDifficulty selectedDifficulty;
+  final ValueChanged<QuizType> onQuizTypeChanged;
+  final ValueChanged<QuizDifficulty> onDifficultyChanged;
+  final VoidCallback onStart;
 
-  const _QuizSelectionView({required this.onSelected});
+  const _QuizSelectionView({
+    required this.selectedQuizType,
+    required this.selectedDifficulty,
+    required this.onQuizTypeChanged,
+    required this.onDifficultyChanged,
+    required this.onStart,
+  });
+
+  String _difficultyTitle(QuizDifficulty difficulty) {
+    switch (difficulty) {
+      case QuizDifficulty.easy:
+        return 'Easy';
+      case QuizDifficulty.medium:
+        return 'Medium';
+      case QuizDifficulty.hard:
+        return 'Hard';
+    }
+  }
+
+  int _questionCount(QuizDifficulty difficulty) {
+    switch (difficulty) {
+      case QuizDifficulty.easy:
+        return 5;
+      case QuizDifficulty.medium:
+        return 10;
+      case QuizDifficulty.hard:
+        return 20;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,13 +426,22 @@ class _QuizSelectionView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Pilih jenis latihan yang ingin kamu mainkan.',
+          'Pilih jenis latihan dan tingkat kesulitan yang ingin kamu mainkan.',
           style: TextStyle(
             color: AppTheme.muted,
             fontFamily: 'Arial',
           ),
         ),
         const SizedBox(height: 32),
+        const Text(
+          'Varian Latihan',
+          style: TextStyle(
+            color: AppTheme.text,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 14),
         LayoutBuilder(
           builder: (context, constraints) {
             final cards = [
@@ -349,19 +449,22 @@ class _QuizSelectionView extends StatelessWidget {
                 title: 'Tebak Arti',
                 description: 'Tebak arti tembung Jawa dalam Bahasa Indonesia.',
                 icon: Icons.translate_rounded,
-                onTap: () => onSelected(QuizType.tebakArti),
+                selected: selectedQuizType == QuizType.tebakArti,
+                onTap: () => onQuizTypeChanged(QuizType.tebakArti),
               ),
               _QuizTypeCard(
                 title: 'Tebak Tembung',
                 description: 'Pilih tembung Jawa yang sesuai dengan artinya.',
                 icon: Icons.menu_book_rounded,
-                onTap: () => onSelected(QuizType.tebakTembung),
+                selected: selectedQuizType == QuizType.tebakTembung,
+                onTap: () => onQuizTypeChanged(QuizType.tebakTembung),
               ),
               _QuizTypeCard(
                 title: 'Ngoko → Krama',
                 description: 'Latih pasangan kata Ngoko dan Krama Alus.',
                 icon: Icons.record_voice_over_rounded,
-                onTap: () => onSelected(QuizType.ngokoKrama),
+                selected: selectedQuizType == QuizType.ngokoKrama,
+                onTap: () => onQuizTypeChanged(QuizType.ngokoKrama),
               ),
             ];
 
@@ -393,7 +496,152 @@ class _QuizSelectionView extends StatelessWidget {
             );
           },
         ),
+        const SizedBox(height: 30),
+        const Text(
+          'Tingkat Kesulitan',
+          style: TextStyle(
+            color: AppTheme.text,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 14),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cards = QuizDifficulty.values.map((difficulty) {
+              final selected = selectedDifficulty == difficulty;
+
+              return _DifficultyCard(
+                title: _difficultyTitle(difficulty),
+                count: _questionCount(difficulty),
+                selected: selected,
+                onTap: () => onDifficultyChanged(difficulty),
+              );
+            }).toList();
+
+            if (constraints.maxWidth < 700) {
+              return Column(
+                children: cards
+                    .map(
+                      (card) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: card,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            }
+
+            return Row(
+              children: cards
+                  .map(
+                    (card) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: card,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 28),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: selectedQuizType == null ? null : onStart,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.green,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 22,
+                vertical: 14,
+              ),
+            ),
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: Text(
+              selectedQuizType == null
+                  ? 'Pilih Varian Latihan'
+                  : 'Mulai ${_difficultyTitle(selectedDifficulty)}',
+            ),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _DifficultyCard extends StatefulWidget {
+  final String title;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DifficultyCard({
+    required this.title,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  State<_DifficultyCard> createState() => _DifficultyCardState();
+}
+
+class _DifficultyCardState extends State<_DifficultyCard> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.selected || hover;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => hover = true),
+      onExit: (_) => setState(() => hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: widget.selected ? AppTheme.green : AppTheme.paper,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: widget.selected
+                  ? AppTheme.green
+                  : AppTheme.gold.withOpacity(active ? .45 : .15),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                style: TextStyle(
+                  color: widget.selected ? Colors.white : AppTheme.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '${widget.count} soal',
+                style: TextStyle(
+                  color: widget.selected
+                      ? Colors.white70
+                      : AppTheme.muted,
+                  fontSize: 12,
+                  fontFamily: 'Arial',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -402,12 +650,14 @@ class _QuizTypeCard extends StatefulWidget {
   final String title;
   final String description;
   final IconData icon;
+  final bool selected;
   final VoidCallback onTap;
 
   const _QuizTypeCard({
     required this.title,
     required this.description,
     required this.icon,
+    required this.selected,
     required this.onTap,
   });
 
@@ -420,6 +670,8 @@ class _QuizTypeCardState extends State<_QuizTypeCard> {
 
   @override
   Widget build(BuildContext context) {
+    final active = widget.selected || hover;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => hover = true),
@@ -431,12 +683,14 @@ class _QuizTypeCardState extends State<_QuizTypeCard> {
           transform: Matrix4.translationValues(0, hover ? -5 : 0, 0),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: AppTheme.paper,
+            color: widget.selected
+                ? AppTheme.green.withOpacity(.08)
+                : AppTheme.paper,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: hover
-                  ? AppTheme.gold.withOpacity(.45)
-                  : AppTheme.gold.withOpacity(.15),
+              color: widget.selected
+                  ? AppTheme.green
+                  : AppTheme.gold.withOpacity(active ? .45 : .15),
             ),
             boxShadow: [
               BoxShadow(
@@ -453,7 +707,9 @@ class _QuizTypeCardState extends State<_QuizTypeCard> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: AppTheme.green.withOpacity(.1),
+                  color: widget.selected
+                      ? AppTheme.green.withOpacity(.12)
+                      : AppTheme.green.withOpacity(.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -824,6 +1080,7 @@ class _FeedbackBox extends StatelessWidget {
 
 class _QuizResultView extends StatelessWidget {
   final QuizType quizType;
+  final QuizDifficulty difficulty;
   final int total;
   final int correct;
   final int wrong;
@@ -834,6 +1091,7 @@ class _QuizResultView extends StatelessWidget {
 
   const _QuizResultView({
     required this.quizType,
+    required this.difficulty,
     required this.total,
     required this.correct,
     required this.wrong,
@@ -851,6 +1109,17 @@ class _QuizResultView extends StatelessWidget {
         return 'Tebak Tembung';
       case QuizType.ngokoKrama:
         return 'Ngoko → Krama';
+    }
+  }
+
+  String get _difficultyLabel {
+    switch (difficulty) {
+      case QuizDifficulty.easy:
+        return 'Easy';
+      case QuizDifficulty.medium:
+        return 'Medium';
+      case QuizDifficulty.hard:
+        return 'Hard';
     }
   }
 
@@ -877,7 +1146,7 @@ class _QuizResultView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          _title,
+          '$_title · $_difficultyLabel',
           style: const TextStyle(
             color: AppTheme.muted,
             fontFamily: 'Arial',
