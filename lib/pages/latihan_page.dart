@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../data/tembung_data.dart';
-import '../services/tembung_loader.dart';
+import '../repository/tembung_repository.dart';
 
 enum QuizType {
   tebakArti,
@@ -70,7 +70,7 @@ class _LatihanPageState extends State<LatihanPage> {
   @override
   void initState() {
     super.initState();
-    _dictionaryFuture = TembungLoader.loadDictionary();
+    _dictionaryFuture = TembungRepository.instance.getAll();
   }
 
   int _questionCount(QuizDifficulty difficulty) {
@@ -113,6 +113,20 @@ class _LatihanPageState extends State<LatihanPage> {
     });
   }
 
+  List<TembungData> _takeRandomItems(
+    List<TembungData> data,
+    int count,
+  ) {
+    final target = min(count, data.length);
+    final indexes = <int>{};
+
+    while (indexes.length < target) {
+      indexes.add(_random.nextInt(data.length));
+    }
+
+    return indexes.map((index) => data[index]).toList(growable: false);
+  }
+
   List<QuizQuestion> _buildQuestions(
     QuizType type,
     List<TembungData> data, {
@@ -122,8 +136,11 @@ class _LatihanPageState extends State<LatihanPage> {
       return [];
     }
 
-    final shuffled = [...data]..shuffle(_random);
-    final selectedItems = shuffled.take(min(count, shuffled.length)).toList();
+    final selectedItems = _takeRandomItems(data, count);
+
+    final indonesiaPool = _uniqueNonEmpty(data.map((e) => e.indonesia));
+    final ngokoPool = _uniqueNonEmpty(data.map((e) => e.ngoko));
+    final kramaPool = _uniqueNonEmpty(data.map((e) => e.kramaAlus));
 
     return selectedItems.map((item) {
       switch (type) {
@@ -134,7 +151,7 @@ class _LatihanPageState extends State<LatihanPage> {
             answer: item.indonesia,
             options: _buildOptions(
               correct: item.indonesia,
-              pool: data.map((e) => e.indonesia),
+              pool: indonesiaPool,
             ),
           );
         case QuizType.tebakTembung:
@@ -144,7 +161,7 @@ class _LatihanPageState extends State<LatihanPage> {
             answer: item.ngoko,
             options: _buildOptions(
               correct: item.ngoko,
-              pool: data.map((e) => e.ngoko),
+              pool: ngokoPool,
             ),
           );
         case QuizType.ngokoKrama:
@@ -154,30 +171,37 @@ class _LatihanPageState extends State<LatihanPage> {
             answer: item.kramaAlus,
             options: _buildOptions(
               correct: item.kramaAlus,
-              pool: data.map((e) => e.kramaAlus),
+              pool: kramaPool,
             ),
           );
       }
-    }).toList();
+    }).toList(growable: false);
+  }
+
+  List<String> _uniqueNonEmpty(Iterable<String> values) {
+    return values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
   }
 
   List<String> _buildOptions({
     required String correct,
-    required Iterable<String> pool,
+    required List<String> pool,
   }) {
-    final uniquePool = pool
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty)
-        .where((value) => value != correct)
-        .toSet()
-        .toList()
-      ..shuffle(_random);
+    if (pool.isEmpty) {
+      return <String>[correct];
+    }
 
-    final options = <String>[
-      correct,
-      ...uniquePool.take(3),
-    ]..shuffle(_random);
+    final target = min(3, pool.length - (pool.contains(correct) ? 1 : 0));
+    final selected = <String>{correct};
 
+    while (selected.length - 1 < target) {
+      selected.add(pool[_random.nextInt(pool.length)]);
+    }
+
+    final options = selected.toList()..shuffle(_random);
     return options;
   }
 
@@ -299,7 +323,7 @@ class _LatihanPageState extends State<LatihanPage> {
                     onRetry: () {
                       setState(() {
                         _dictionaryFuture =
-                            TembungLoader.loadDictionary();
+                            TembungRepository.instance.reload();
                       });
                     },
                   );

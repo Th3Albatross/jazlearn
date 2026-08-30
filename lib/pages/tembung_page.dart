@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../data/tembung_data.dart';
-import '../services/tembung_loader.dart';
+import '../repository/tembung_repository.dart';
 import '../services/sound_service.dart';
 
 enum LanguageMode {
@@ -22,6 +24,7 @@ class _TembungPageState extends State<TembungPage> {
   static const int pageSize = 9;
 
   late Future<List<TembungData>> _dictionaryFuture;
+  Timer? _searchDebounce;
 
   final TextEditingController _searchController =
       TextEditingController();
@@ -34,7 +37,7 @@ class _TembungPageState extends State<TembungPage> {
   void initState() {
     super.initState();
 
-    _dictionaryFuture = TembungLoader.loadDictionary();
+    _dictionaryFuture = TembungRepository.instance.getAll();
 
     _searchController.addListener(_onSearchChanged);
   }
@@ -42,14 +45,22 @@ class _TembungPageState extends State<TembungPage> {
   @override
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
+    _searchDebounce?.cancel();
+    unawaited(SoundService.instance.stop());
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.trim().toLowerCase();
-      _currentPage = 0;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      final query = _searchController.text.trim().toLowerCase();
+      if (query == _searchQuery) return;
+      setState(() {
+        _searchQuery = query;
+        _currentPage = 0;
+      });
     });
   }
 
@@ -203,7 +214,7 @@ class _TembungPageState extends State<TembungPage> {
                           setState(() {
                             _currentPage = 0;
                             _dictionaryFuture =
-                                TembungLoader.loadDictionary();
+                                TembungRepository.instance.reload();
                           });
                         },
                       );
@@ -254,6 +265,7 @@ class _TembungPageState extends State<TembungPage> {
                           runSpacing: 18,
                           children: currentData.map((item) {
                             return VocabularyCard(
+                              key: ValueKey('${item.uid}_$_languageMode'),
                               data: item,
                               mode: _languageMode,
                             );

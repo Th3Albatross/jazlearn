@@ -4,6 +4,30 @@ import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/course_card.dart';
 
+const _homeGuideSteps = [
+  _GuideItem(
+    number: '01',
+    icon: Icons.menu_book_rounded,
+    title: 'Pahami materi',
+    description: 'Pelajari konsep dan tata bahasa melalui video serta rangkuman.',
+    route: '/materi',
+  ),
+  _GuideItem(
+    number: '02',
+    icon: Icons.record_voice_over_rounded,
+    title: 'Tambah kosakata',
+    description: 'Cari tembung dan dengarkan pelafalan Ngoko maupun Krama.',
+    route: '/tembung',
+  ),
+  _GuideItem(
+    number: '03',
+    icon: Icons.quiz_rounded,
+    title: 'Uji pemahaman',
+    description: 'Kerjakan latihan untuk menguji seberapa jauh kamu memahami materi.',
+    route: '/latihan',
+  ),
+];
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -341,29 +365,7 @@ class HomePage extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final steps = [
-            _GuideItem(
-              number: '01',
-              icon: Icons.menu_book_rounded,
-              title: 'Pahami materi',
-              description: 'Pelajari konsep dan tata bahasa melalui video serta rangkuman.',
-              route: '/materi',
-            ),
-            _GuideItem(
-              number: '02',
-              icon: Icons.record_voice_over_rounded,
-              title: 'Tambah kosakata',
-              description: 'Cari tembung dan dengarkan pelafalan Ngoko maupun Krama.',
-              route: '/tembung',
-            ),
-            _GuideItem(
-              number: '03',
-              icon: Icons.quiz_rounded,
-              title: 'Uji pemahaman',
-              description: 'Kerjakan latihan untuk menguji seberapa jauh kamu memahami materi.',
-              route: '/latihan',
-            ),
-          ];
+          final steps = _homeGuideSteps;
 
           final compact = constraints.maxWidth < 850;
 

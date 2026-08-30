@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -15,6 +17,7 @@ class MateriPage extends StatefulWidget {
 
 class _MateriPageState extends State<MateriPage> {
   late Future<List<MateriData>> _materiFuture;
+  Timer? _searchDebounce;
   final TextEditingController _searchController =
       TextEditingController();
 
@@ -30,13 +33,18 @@ class _MateriPageState extends State<MateriPage> {
   @override
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.trim().toLowerCase();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      final query = _searchController.text.trim().toLowerCase();
+      if (query == _searchQuery) return;
+      setState(() => _searchQuery = query);
     });
   }
 
@@ -146,7 +154,7 @@ class _MateriPageState extends State<MateriPage> {
                         error: snapshot.error.toString(),
                         onRetry: () {
                           setState(() {
-                            _materiFuture = MateriLoader.load();
+                            _materiFuture = MateriLoader.load(forceReload: true);
                           });
                         },
                       );

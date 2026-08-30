@@ -2,34 +2,34 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 
+const _aksaraJawa = [
+  ['ꦲ', 'Ha'],
+  ['ꦤ', 'Na'],
+  ['ꦕ', 'Ca'],
+  ['ꦫ', 'Ra'],
+  ['ꦏ', 'Ka'],
+  ['ꦢ', 'Da'],
+  ['ꦠ', 'Ta'],
+  ['ꦱ', 'Sa'],
+  ['ꦮ', 'Wa'],
+  ['ꦭ', 'La'],
+  ['ꦥ', 'Pa'],
+  ['ꦝ', 'Dha'],
+  ['ꦗ', 'Ja'],
+  ['ꦪ', 'Ya'],
+  ['ꦚ', 'Nya'],
+  ['ꦩ', 'Ma'],
+  ['ꦒ', 'Ga'],
+  ['ꦧ', 'Ba'],
+  ['ꦛ', 'Tha'],
+  ['ꦔ', 'Nga'],
+];
+
 class AksaraPage extends StatelessWidget {
   const AksaraPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final aksara = [
-      ['ꦲ', 'Ha'],
-      ['ꦤ', 'Na'],
-      ['ꦕ', 'Ca'],
-      ['ꦫ', 'Ra'],
-      ['ꦏ', 'Ka'],
-      ['ꦢ', 'Da'],
-      ['ꦠ', 'Ta'],
-      ['ꦱ', 'Sa'],
-      ['ꦮ', 'Wa'],
-      ['ꦭ', 'La'],
-      ['ꦥ', 'Pa'],
-      ['ꦝ', 'Dha'],
-      ['ꦗ', 'Ja'],
-      ['ꦪ', 'Ya'],
-      ['ꦚ', 'Nya'],
-      ['ꦩ', 'Ma'],
-      ['ꦒ', 'Ga'],
-      ['ꦧ', 'Ba'],
-      ['ꦛ', 'Tha'],
-      ['ꦔ', 'Nga'],
-    ];
-
     return AppShell(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(45),
@@ -70,7 +70,7 @@ class AksaraPage extends StatelessWidget {
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
-                  itemCount: aksara.length,
+                  itemCount: _aksaraJawa.length,
                   itemBuilder: (context, index) {
                     return Container(
                       decoration: BoxDecoration(
@@ -83,7 +83,7 @@ class AksaraPage extends StatelessWidget {
                             MainAxisAlignment.center,
                         children: [
                           Text(
-                            aksara[index][0],
+                            _aksaraJawa[index][0],
                             style: const TextStyle(
                               fontSize: 48,
                               color: AppTheme.brown,
@@ -91,7 +91,7 @@ class AksaraPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            aksara[index][1],
+                            _aksaraJawa[index][1],
                             style: const TextStyle(
                               color: AppTheme.text,
                               fontWeight:
@@ -112,4 +112,3 @@ class AksaraPage extends StatelessWidget {
     );
   }
 }
-

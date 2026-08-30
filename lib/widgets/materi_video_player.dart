@@ -29,6 +29,8 @@ class _MateriVideoPlayerState extends State<MateriVideoPlayer> {
   // Selama proses initialize dan restore timestamp,
   // listener tidak boleh menyimpan posisi.
   bool _readyToSavePosition = false;
+  Duration _lastSavedPosition = Duration.zero;
+  static const Duration _saveInterval = Duration(milliseconds: 750);
 
   @override
   void initState() {
@@ -68,6 +70,7 @@ class _MateriVideoPlayerState extends State<MateriVideoPlayer> {
       }
 
       // Baru setelah restore selesai, izinkan listener menyimpan posisi.
+      _lastSavedPosition = _controller.value.position;
       _readyToSavePosition = true;
 
       if (!mounted) {
@@ -102,17 +105,19 @@ class _MateriVideoPlayerState extends State<MateriVideoPlayer> {
     }
 
     final position = _controller.value.position;
+    // Parent hanya menyimpan nilai terbaru; ini murah dibanding rebuild UI.
+    widget.onPositionChanged?.call(position);
 
+    if (position >= _lastSavedPosition &&
+        position - _lastSavedPosition < _saveInterval) {
+      return;
+    }
+
+    _lastSavedPosition = position;
     VideoProgressService.instance.savePosition(
       widget.videoId,
       position,
     );
-
-    widget.onPositionChanged?.call(position);
-
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   @override
@@ -174,105 +179,102 @@ class _MateriVideoPlayerState extends State<MateriVideoPlayer> {
       );
     }
 
-    final value = _controller.value;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
-      child: AspectRatio(
-        aspectRatio: value.aspectRatio,
-        child: Stack(
-          children: [
-            VideoPlayer(_controller),
-
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(.15),
-                      Colors.transparent,
-                      Colors.black.withOpacity(.75),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            Center(
-              child: Material(
-                color: Colors.black.withOpacity(.55),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () {
-                    setState(() {
-                      if (_controller.value.isPlaying) {
-                        _controller.pause();
-                      } else {
-                        _controller.play();
-                      }
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Icon(
-                      value.isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 34,
+      child: ValueListenableBuilder<VideoPlayerValue>(
+        valueListenable: _controller,
+        builder: (context, value, _) {
+          return AspectRatio(
+            aspectRatio: value.aspectRatio,
+            child: Stack(
+              children: [
+                VideoPlayer(_controller),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(.15),
+                          Colors.transparent,
+                          Colors.black.withOpacity(.75),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-
-            Positioned(
-              left: 18,
-              right: 18,
-              bottom: 12,
-              child: Column(
-                children: [
-                  VideoProgressIndicator(
-                    _controller,
-                    allowScrubbing: true,
-                    padding: EdgeInsets.zero,
-                    colors: const VideoProgressColors(
-                      playedColor: AppTheme.gold,
-                      bufferedColor: Colors.white38,
-                      backgroundColor: Colors.white24,
+                Center(
+                  child: Material(
+                    color: Colors.black.withOpacity(.55),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () {
+                        if (value.isPlaying) {
+                          _controller.pause();
+                        } else {
+                          _controller.play();
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Icon(
+                          value.isPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 34,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  bottom: 12,
+                  child: Column(
                     children: [
-                      Text(
-                        _formatDuration(value.position),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                      VideoProgressIndicator(
+                        _controller,
+                        allowScrubbing: true,
+                        padding: EdgeInsets.zero,
+                        colors: const VideoProgressColors(
+                          playedColor: AppTheme.gold,
+                          bufferedColor: Colors.white38,
+                          backgroundColor: Colors.white24,
                         ),
                       ),
-                      Text(
-                        _formatDuration(value.duration),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatDuration(value.position),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            _formatDuration(value.duration),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

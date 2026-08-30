@@ -4,19 +4,10 @@ import '../services/tembung_loader.dart';
 class TembungRepository {
   TembungRepository._();
 
-  static final TembungRepository instance =
-      TembungRepository._();
+  static final TembungRepository instance = TembungRepository._();
 
-  List<TembungData>? _cache;
-
-  Future<List<TembungData>> getAll() async {
-    if (_cache != null) {
-      return _cache!;
-    }
-
-    _cache = await TembungLoader.loadDictionary();
-
-    return _cache!;
+  Future<List<TembungData>> getAll() {
+    return TembungLoader.loadDictionary();
   }
 
   Future<TembungData?> getByUid(String uid) async {
@@ -32,7 +23,10 @@ class TembungRepository {
   }
 
   void clearCache() {
-    _cache = null;
+    TembungLoader.clearCache();
+  }
+
+  Future<List<TembungData>> reload() {
+    return TembungLoader.loadDictionary(forceReload: true);
   }
 }
-

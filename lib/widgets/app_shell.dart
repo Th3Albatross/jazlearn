@@ -13,6 +13,15 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.cream,
+      drawer: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 900) {
+            return const SizedBox.shrink();
+          }
+          return const Drawer(child: AppSidebar());
+        },
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final desktop = constraints.maxWidth >= 900;
@@ -21,44 +30,34 @@ class AppShell extends StatelessWidget {
             return Row(
               children: [
                 const AppSidebar(),
-                Expanded(
-                  child: child,
-                ),
+                Expanded(child: child),
               ],
             );
           }
 
-          return Scaffold(
-            backgroundColor: AppTheme.cream,
-            drawer: const Drawer(
-              child: AppSidebar(),
-            ),
-            body: Stack(
-              children: [
-                child,
-                Positioned(
-                  top: 20,
-                  left: 20,
-                  child: Builder(
-                    builder: (context) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: AppTheme.darkGreen,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          color: Colors.white,
-                          icon: const Icon(Icons.menu_rounded),
-                          onPressed: () {
-                            Scaffold.of(context).openDrawer();
-                          },
-                        ),
-                      );
-                    },
-                  ),
+          return Stack(
+            children: [
+              child,
+              Positioned(
+                top: 20,
+                left: 20,
+                child: Builder(
+                  builder: (context) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.darkGreen,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        color: Colors.white,
+                        icon: const Icon(Icons.menu_rounded),
+                        onPressed: () => Scaffold.of(context).openDrawer(),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

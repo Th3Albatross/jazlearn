@@ -30,6 +30,8 @@ class _MateriDetailPageState extends State<MateriDetailPage> {
   String? _summary;
   Duration _currentVideoPosition = Duration.zero;
 
+  static final Map<String, Future<String>> _summaryCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -38,9 +40,9 @@ class _MateriDetailPageState extends State<MateriDetailPage> {
 
   Future<void> _loadSummary() async {
     try {
-      final summary = await rootBundle.loadString(
-        widget.materi.summaryAsset,
-      );
+      final asset = widget.materi.summaryAsset;
+      final summary = await (_summaryCache[asset] ??=
+          rootBundle.loadString(asset));
 
       if (!mounted) {
         return;
@@ -50,6 +52,7 @@ class _MateriDetailPageState extends State<MateriDetailPage> {
         _summary = summary;
       });
     } catch (e) {
+      _summaryCache.remove(widget.materi.summaryAsset);
       if (!mounted) {
         return;
       }
