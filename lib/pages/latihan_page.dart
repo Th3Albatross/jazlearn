@@ -430,7 +430,7 @@ class _LatihanPageState extends State<LatihanPage> {
   }
 }
 
-class _QuizSelectionView extends StatelessWidget {
+class _QuizSelectionView extends StatefulWidget {
   final QuizType? selectedQuizType;
   final QuizDifficulty selectedDifficulty;
   final ValueChanged<QuizType> onQuizTypeChanged;
@@ -444,6 +444,36 @@ class _QuizSelectionView extends StatelessWidget {
     required this.onDifficultyChanged,
     required this.onStart,
   });
+
+  @override
+  State<_QuizSelectionView> createState() => _QuizSelectionViewState();
+}
+
+class _QuizSelectionViewState extends State<_QuizSelectionView> {
+  final ScrollController _quizScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _quizScrollController.addListener(_onQuizScroll);
+  }
+
+  void _onQuizScroll() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _canScrollRight =>
+      _quizScrollController.hasClients &&
+      _quizScrollController.position.maxScrollExtent > 2 &&
+      _quizScrollController.position.pixels <
+          _quizScrollController.position.maxScrollExtent - 2;
+
+  @override
+  void dispose() {
+    _quizScrollController.removeListener(_onQuizScroll);
+    _quizScrollController.dispose();
+    super.dispose();
+  }
 
   String _difficultyTitle(QuizDifficulty difficulty) {
     switch (difficulty) {
@@ -505,29 +535,29 @@ class _QuizSelectionView extends StatelessWidget {
                 title: 'Tebak Arti',
                 description: 'Tebak arti tembung Jawa dalam Bahasa Indonesia.',
                 icon: Icons.translate_rounded,
-                selected: selectedQuizType == QuizType.tebakArti,
-                onTap: () => onQuizTypeChanged(QuizType.tebakArti),
+                selected: widget.selectedQuizType == QuizType.tebakArti,
+                onTap: () => widget.onQuizTypeChanged(QuizType.tebakArti),
               ),
               _QuizTypeCard(
                 title: 'Tebak Tembung',
                 description: 'Pilih tembung Jawa yang sesuai dengan artinya.',
                 icon: Icons.menu_book_rounded,
-                selected: selectedQuizType == QuizType.tebakTembung,
-                onTap: () => onQuizTypeChanged(QuizType.tebakTembung),
+                selected: widget.selectedQuizType == QuizType.tebakTembung,
+                onTap: () => widget.onQuizTypeChanged(QuizType.tebakTembung),
               ),
               _QuizTypeCard(
                 title: 'Ngoko → Krama',
                 description: 'Latih pasangan kata Ngoko dan Krama Alus.',
                 icon: Icons.record_voice_over_rounded,
-                selected: selectedQuizType == QuizType.ngokoKrama,
-                onTap: () => onQuizTypeChanged(QuizType.ngokoKrama),
+                selected: widget.selectedQuizType == QuizType.ngokoKrama,
+                onTap: () => widget.onQuizTypeChanged(QuizType.ngokoKrama),
               ),
               _QuizTypeCard(
                 title: 'Tebak Aksara Jawa',
                 description: 'Tebak simbol aksara Jawa dari pelafalannya.',
                 icon: Icons.edit_rounded,
-                selected: selectedQuizType == QuizType.tebakAksara,
-                onTap: () => onQuizTypeChanged(QuizType.tebakAksara),
+                selected: widget.selectedQuizType == QuizType.tebakAksara,
+                onTap: () => widget.onQuizTypeChanged(QuizType.tebakAksara),
               ),
             ];
 
@@ -535,32 +565,112 @@ class _QuizSelectionView extends StatelessWidget {
                 ? (constraints.maxWidth - 32) / 3
                 : constraints.maxWidth;
 
-            return ScrollConfiguration(
-              behavior: const MaterialScrollBehavior().copyWith(
-                dragDevices: {
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.mouse,
-                  PointerDeviceKind.trackpad,
-                },
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
                   children: [
-                    for (int i = 0; i < cards.length; i++)
-                      Padding(
-                        padding: EdgeInsets.only(
-                          right: i == cards.length - 1 ? 0 : 16,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ScrollConfiguration(
+                        behavior: const MaterialScrollBehavior().copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.trackpad,
+                          },
                         ),
-                        child: SizedBox(
-                          width: cardWidth,
-                          child: cards[i],
+                        child: Scrollbar(
+                          controller: _quizScrollController,
+                          thumbVisibility: true,
+                          trackVisibility: true,
+                          thickness: 7,
+                          radius: const Radius.circular(10),
+                          interactive: true,
+                          child: SingleChildScrollView(
+                            controller: _quizScrollController,
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (int i = 0; i < cards.length; i++)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      right: i == cards.length - 1 ? 0 : 16,
+                                    ),
+                                    child: SizedBox(
+                                      width: cardWidth,
+                                      child: cards[i],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      bottom: 20,
+                      child: IgnorePointer(
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 180),
+                          opacity: _canScrollRight ? 1 : 0,
+                          child: Container(
+                            width: 72,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Colors.transparent,
+                                  AppTheme.paper.withOpacity(.95),
+                                ],
+                              ),
+                            ),
+                            child: const Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: EdgeInsets.only(right: 6),
+                                child: Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: AppTheme.green,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 6),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: _canScrollRight ? 1 : 0,
+                  child: Row(
+                    children: const [
+                      Icon(
+                        Icons.swipe_rounded,
+                        color: AppTheme.muted,
+                        size: 16,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Geser ke kanan untuk melihat latihan lainnya',
+                        style: TextStyle(
+                          color: AppTheme.muted,
+                          fontSize: 11,
+                          fontFamily: 'Arial',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -577,13 +687,13 @@ class _QuizSelectionView extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final cards = QuizDifficulty.values.map((difficulty) {
-              final selected = selectedDifficulty == difficulty;
+              final selected = widget.selectedDifficulty == difficulty;
 
               return _DifficultyCard(
                 title: _difficultyTitle(difficulty),
                 count: _questionCount(difficulty),
                 selected: selected,
-                onTap: () => onDifficultyChanged(difficulty),
+                onTap: () => widget.onDifficultyChanged(difficulty),
               );
             }).toList();
 
@@ -621,7 +731,7 @@ class _QuizSelectionView extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton.icon(
-            onPressed: selectedQuizType == null ? null : onStart,
+            onPressed: widget.selectedQuizType == null ? null : widget.onStart,
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.green,
               padding: const EdgeInsets.symmetric(
@@ -631,9 +741,9 @@ class _QuizSelectionView extends StatelessWidget {
             ),
             icon: const Icon(Icons.play_arrow_rounded),
             label: Text(
-              selectedQuizType == null
+              widget.selectedQuizType == null
                   ? 'Pilih Varian Latihan'
-                  : 'Mulai ${_difficultyTitle(selectedDifficulty)}',
+                  : 'Mulai ${_difficultyTitle(widget.selectedDifficulty)}',
             ),
           ),
         ),
