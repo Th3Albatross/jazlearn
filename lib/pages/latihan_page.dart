@@ -1,16 +1,19 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_shell.dart';
 import '../data/tembung_data.dart';
 import '../repository/tembung_repository.dart';
+import '../data/aksara_data.dart';
 
 enum QuizType {
   tebakArti,
   tebakTembung,
   ngokoKrama,
+  tebakAksara,
 }
 
 enum QuizDifficulty {
@@ -132,6 +135,27 @@ class _LatihanPageState extends State<LatihanPage> {
     List<TembungData> data, {
     int count = 10,
   }) {
+    if (type == QuizType.tebakAksara) {
+      if (aksaraData.length < 4) {
+        return [];
+      }
+
+      final selectedItems = _takeRandomAksaraItems(count);
+      final aksaraPool = _uniqueNonEmpty(aksaraData.map((e) => e.aksara));
+
+      return selectedItems.map((item) {
+        return QuizQuestion(
+          contextLabel: 'TEBAK AKSARA JAWA',
+          prompt: 'Apa aksara dari kata "${item.pelafalan}"?',
+          answer: item.aksara,
+          options: _buildOptions(
+            correct: item.aksara,
+            pool: aksaraPool,
+          ),
+        );
+      }).toList(growable: false);
+    }
+
     if (data.length < 4) {
       return [];
     }
@@ -174,8 +198,16 @@ class _LatihanPageState extends State<LatihanPage> {
               pool: kramaPool,
             ),
           );
+        case QuizType.tebakAksara:
+          throw StateError('Tebak Aksara Jawa ditangani sebelum data tembung.');
       }
     }).toList(growable: false);
+  }
+
+  List<AksaraData> _takeRandomAksaraItems(int count) {
+    final target = min(count, aksaraData.length);
+    final items = [...aksaraData]..shuffle(_random);
+    return items.take(target).toList(growable: false);
   }
 
   List<String> _uniqueNonEmpty(Iterable<String> values) {
@@ -331,7 +363,7 @@ class _LatihanPageState extends State<LatihanPage> {
 
                 final data = snapshot.data ?? [];
 
-                if (data.length < 4) {
+                if (data.length < 4 && _selectedQuizType != QuizType.tebakAksara) {
                   return const _EmptyDataView();
                 }
 
@@ -490,33 +522,45 @@ class _QuizSelectionView extends StatelessWidget {
                 selected: selectedQuizType == QuizType.ngokoKrama,
                 onTap: () => onQuizTypeChanged(QuizType.ngokoKrama),
               ),
+              _QuizTypeCard(
+                title: 'Tebak Aksara Jawa',
+                description: 'Tebak simbol aksara Jawa dari pelafalannya.',
+                icon: Icons.edit_rounded,
+                selected: selectedQuizType == QuizType.tebakAksara,
+                onTap: () => onQuizTypeChanged(QuizType.tebakAksara),
+              ),
             ];
 
-            if (constraints.maxWidth < 700) {
-              return Column(
-                children: cards
-                    .map(
-                      (card) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: card,
-                      ),
-                    )
-                    .toList(),
-              );
-            }
+            final cardWidth = constraints.maxWidth >= 700
+                ? (constraints.maxWidth - 32) / 3
+                : constraints.maxWidth;
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: cards
-                  .map(
-                    (card) => Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: card,
+            return ScrollConfiguration(
+              behavior: const MaterialScrollBehavior().copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < cards.length; i++)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          right: i == cards.length - 1 ? 0 : 16,
+                        ),
+                        child: SizedBox(
+                          width: cardWidth,
+                          child: cards[i],
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(),
+                  ],
+                ),
+              ),
             );
           },
         ),
@@ -822,6 +866,8 @@ class _QuizQuestionView extends StatelessWidget {
         return 'Tebak Tembung';
       case QuizType.ngokoKrama:
         return 'Ngoko → Krama';
+      case QuizType.tebakAksara:
+        return 'Tebak Aksara Jawa';
     }
   }
 
@@ -911,6 +957,7 @@ class _QuizQuestionView extends StatelessWidget {
                     selected: selectedAnswer == option,
                     submitted: submitted,
                     correct: option == question.answer,
+                    isAksara: quizType == QuizType.tebakAksara,
                     onTap: () => onSelect(option),
                   ),
                 ),
@@ -962,6 +1009,7 @@ class _AnswerOption extends StatelessWidget {
   final bool selected;
   final bool submitted;
   final bool correct;
+  final bool isAksara;
   final VoidCallback onTap;
 
   const _AnswerOption({
@@ -969,6 +1017,7 @@ class _AnswerOption extends StatelessWidget {
     required this.selected,
     required this.submitted,
     required this.correct,
+    required this.isAksara,
     required this.onTap,
   });
 
@@ -1011,10 +1060,13 @@ class _AnswerOption extends StatelessWidget {
               Expanded(
                 child: Text(
                   text,
+                  textAlign: isAksara ? TextAlign.center : TextAlign.start,
                   style: TextStyle(
                     color: textColor,
                     fontWeight: FontWeight.w700,
-                    fontFamily: 'Arial',
+                    fontSize: isAksara ? 30 : 14,
+                    height: isAksara ? 1.2 : null,
+                    fontFamily: isAksara ? null : 'Arial',
                   ),
                 ),
               ),
@@ -1133,6 +1185,8 @@ class _QuizResultView extends StatelessWidget {
         return 'Tebak Tembung';
       case QuizType.ngokoKrama:
         return 'Ngoko → Krama';
+      case QuizType.tebakAksara:
+        return 'Tebak Aksara Jawa';
     }
   }
 
