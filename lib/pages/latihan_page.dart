@@ -571,7 +571,7 @@ class _QuizSelectionViewState extends State<_QuizSelectionView> {
                 Stack(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 22),
                       child: ScrollConfiguration(
                         behavior: const MaterialScrollBehavior().copyWith(
                           dragDevices: {
@@ -584,13 +584,13 @@ class _QuizSelectionViewState extends State<_QuizSelectionView> {
                           controller: _quizScrollController,
                           thumbVisibility: true,
                           trackVisibility: true,
-                          thickness: 7,
-                          radius: const Radius.circular(10),
+                          thickness: 10,
+                          radius: const Radius.circular(12),
                           interactive: true,
                           child: SingleChildScrollView(
                             controller: _quizScrollController,
                             scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.only(bottom: 24),
+                            padding: const EdgeInsets.only(top: 6, bottom: 42),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -613,32 +613,52 @@ class _QuizSelectionViewState extends State<_QuizSelectionView> {
                     Positioned(
                       top: 0,
                       right: 0,
-                      bottom: 20,
+                      bottom: 44,
                       child: IgnorePointer(
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 180),
                           opacity: _canScrollRight ? 1 : 0,
-                          child: Container(
-                            width: 72,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  Colors.transparent,
-                                  AppTheme.paper.withOpacity(.95),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 9,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.paper.withOpacity(.96),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: AppTheme.green.withOpacity(.18),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(.08),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 5),
+                                  ),
                                 ],
                               ),
-                            ),
-                            child: const Align(
-                              alignment: Alignment.centerRight,
-                              child: Padding(
-                                padding: EdgeInsets.only(right: 6),
-                                child: Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: AppTheme.green,
-                                  size: 24,
-                                ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Geser',
+                                    style: TextStyle(
+                                      color: AppTheme.green,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      fontFamily: 'Arial',
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: AppTheme.green,
+                                    size: 20,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1676,3 +1696,4 @@ class _EmptyDataView extends StatelessWidget {
     );
   }
 }
+
